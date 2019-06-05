@@ -3,6 +3,8 @@
 import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
+from std_msgs.msg import Int32
+from scipy.spatial import KDTree
 
 import math
 
@@ -30,23 +32,73 @@ class WaypointUpdater(object):
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
-
-        # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
-
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
+        rospy.Subscriber('/obstacle_waypoint', Lane, self.obstacle_cb)
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
+        self.base_waypoints = None
+        self.waypoint_tree = None
+        self.waypoints_2d = None
+        self.pose = None
 
         # TODO: Add other member variables you need below
 
-        rospy.spin()
+        self.loop()
 
+
+    def loop(self):
+        rate = rospy.Rate(50)
+        while not rospy.is_shutdown():
+            # if the initialization is done
+            if self.pose and self.base_waypoints:
+                closest_waypoint_id = self.get_closest_waypoints()
+                self.publish_waypoints( closest_waypoint_id )
+            rate.sleep()
+
+    
+    def get_closest_waypoints(self):
+        '''
+        Returns the indices of the closest :py:data:LOOKAHEAD_WPS waypoints 
+        to the last know pose :py:attr:pose
+        '''
+        x = self.pose.pose.position.x
+        y = self.pose.pose.position.y
+        closest_id = self.waypoint_tree.query( [x,y], 1 )[1]
+        # coordinates of the waypoint behind the closest one 
+        x1 = self.waypoints_2d[closest_id-1][0]
+        y1 = self.waypoints_2d[closest_id-1][1]
+        # coordinates of the closest waypoint
+        x2 = self.waypoints_2d[closest_id][0]
+        y2 = self.waypoints_2d[closest_id][1]
+        #dot product of the vectors originating at the current pose
+        #ending in the two waypoints above 
+        dot_product = (x1-x) * (x2-x) + (y1 - y) * (y2 - y)
+        if dot_product <= 0:
+            #(x,y) is between (x1,y1) and (x2,y2)
+            return closest_id
+        else:
+            # both are behind
+            return (closest_id + 1) % len(self.waypoints_2d)
+        
+    def publish_waypoints(self, start):
+        '''
+        Publishes a message of type :py:class:Lane containing the points 
+        ahead the last know pose :py:attr:pose.
+        '''
+        lane = Lane()
+        lane.header = self.base_waypoints.header
+        lane.waypoints = self.base_waypoints.waypoints[ start : (start + LOOKAHEAD_WPS) ]
+        self.final_waypoints_pub.publish(lane)
+        
     def pose_cb(self, msg):
-        # TODO: Implement
-        pass
+        self.pose = msg
 
     def waypoints_cb(self, waypoints):
-        # TODO: Implement
-        pass
+        self.base_waypoints = waypoints
+        if not self.waypoints_2d:
+            self.waypoints_2d = [[ waypoint.pose.pose.position.x, waypoint.pose.pose.position.y ] 
+                                 for waypoint in waypoints.waypoints ]
+            self.waypoint_tree = KDTree(self.waypoints_2d) 
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
