@@ -91,30 +91,38 @@ class WaypointUpdater(object):
         closest_index = self.get_closest_waypoints()
         farthest_index = closest_index + LOOKAHEAD_WPS
         
+        rospy.logdebug("closest_index = %d farthest_index =  %d self.stopline_waypoint_index = %d", 
+                      closest_index, farthest_index, self.stopline_waypoint_index)
+        
         lane.header = self.base_waypoints.header
         if self.stopline_waypoint_index == -1 or ( self.stopline_waypoint_index >= farthest_index ):
-            lane.waypoints = self.base_waypoints.waypoints[ start : (start + LOOKAHEAD_WPS) ]
+            lane.waypoints = self.base_waypoints.waypoints[ closest_index : farthest_index ]
         else:
             # decelerate
             lane.waypoints = []
-            stop_index = max( self.stopline_waypoint_index - 4, 0 )
-            #TODO get current velocity
-            v0 = self.get_waypoint_velocity( self.base_waypoints.waypoints[closest_index] )
+            # stop a little before the stop line to account for falf of the length of the car
+            stop_index = max( self.stopline_waypoint_index - 2, 0 )
             
-            x0 = self.distance(self.base_waypoints.waypoints, closest_index, stop_index)/2.0
+            # try to stop smoothly in 30 waypoints from the stop line
+            v_index = max(0, stop_index - 30)
+            v0 = self.get_waypoint_velocity( self.base_waypoints.waypoints[v_index] )
+            x0 = self.distance(self.base_waypoints.waypoints, v_index, stop_index)/2.0
             rospy.logdebug("x0=%f v0=%f", x0, v0)
+            
             for i in range(closest_index, stop_index):
                 waypoint = Waypoint()
                 waypoint.pose = self.base_waypoints.waypoints[i].pose
-                # calculate velocity
+                # calculate velocity as a sgmoid function
                 dist = self.distance(self.base_waypoints.waypoints, i, stop_index)
-                exp_term = math.exp( -0.5*(dist - x0) )
+                exp_term = math.exp( -0.2*(dist - x0) )
                 velocity = v0 / (1+exp_term)
-                if velocity < 1.0:
-                    velocity = 0.
+                if ( i == stop_index - 1 ):
+                    velocity = 0.0
                 rospy.logdebug("%f %f", dist, velocity)
                 waypoint.twist.twist.linear.x = min( velocity, self.base_waypoints.waypoints[i].twist.twist.linear.x )
                 lane.waypoints.append(waypoint)
+            #set the velocity of the last point to 0.0
+            #lane.waypoints[ len(lane.waypoints) - 1 ] = 0.0
                 
         
         self.final_waypoints_pub.publish(lane)
@@ -130,6 +138,7 @@ class WaypointUpdater(object):
             self.waypoint_tree = KDTree(self.waypoints_2d) 
 
     def traffic_cb(self, msg):
+        rospy.logdebug( "traffic_cb stopline_waypoint_index= %d", msg.data )
         self.stopline_waypoint_index = msg.data
 
     def obstacle_cb(self, msg):
