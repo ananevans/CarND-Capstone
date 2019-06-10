@@ -4,6 +4,8 @@ Team members:
 1. [Ana Nora Evans](http://http://ananoraevans.org/) - Team Lead, implements the waypoint updater node
 2. Eric Yoo - implements the DBW node
 3. Kalle Bylin - implements the traffic light detection
+4. Mohamed Elbanhawi
+5. Nick Atanasov
 
 
 Please use **one** of the two installation options, either native **or** docker installation.
