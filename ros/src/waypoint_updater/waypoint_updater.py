@@ -42,7 +42,9 @@ class WaypointUpdater(object):
         self.pose = None
         self.stopline_waypoint_index = -1
 
+
         # TODO: Add other member variables you need below
+        self.decel_limit_mpsps = rospy.get_param('~max_decel_mpsps', 1.0)
 
         self.loop()
 
@@ -91,7 +93,7 @@ class WaypointUpdater(object):
         closest_index = self.get_closest_waypoints()
         farthest_index = closest_index + LOOKAHEAD_WPS
         
-        rospy.logdebug("closest_index = %d farthest_index =  %d self.stopline_waypoint_index = %d", 
+        rospy.loginfo("closest_index = %d farthest_index =  %d self.stopline_waypoint_index = %d", 
                       closest_index, farthest_index, self.stopline_waypoint_index)
         
         lane.header = self.base_waypoints.header
@@ -107,7 +109,7 @@ class WaypointUpdater(object):
             v_index = max(0, stop_index - 30)
             v0 = self.get_waypoint_velocity( self.base_waypoints.waypoints[v_index] )
             x0 = self.distance(self.base_waypoints.waypoints, v_index, stop_index)/2.0
-            rospy.logdebug("x0=%f v0=%f", x0, v0)
+            rospy.loginfo("x0=%f v0=%f", x0, v0)
             
             for i in range(closest_index, stop_index):
                 waypoint = Waypoint()
@@ -118,7 +120,12 @@ class WaypointUpdater(object):
                 velocity = v0 / (1+exp_term)
                 if ( i == stop_index - 1 ):
                     velocity = 0.0
-                rospy.logdebug("%f %f", dist, velocity)
+                # do not exceed logitudinal acceleration limits
+                max_vel = math.sqrt(2 * self.decel_limit_mpsps * dist)
+                if max_vel < 1.:
+                    max_vel = 0.0
+                rospy.loginfo("%2.2f %2.2f %2.2f", dist, velocity, max_vel)
+                velocity = min(max_vel, velocity)
                 waypoint.twist.twist.linear.x = min( velocity, self.base_waypoints.waypoints[i].twist.twist.linear.x )
                 lane.waypoints.append(waypoint)
             #set the velocity of the last point to 0.0
@@ -131,6 +138,7 @@ class WaypointUpdater(object):
         self.pose = msg
 
     def waypoints_cb(self, waypoints):
+        rospy.loginfo("created_waypoint_kdtree")
         self.base_waypoints = waypoints
         if not self.waypoints_2d:
             self.waypoints_2d = [[ waypoint.pose.pose.position.x, waypoint.pose.pose.position.y ] 
@@ -138,7 +146,7 @@ class WaypointUpdater(object):
             self.waypoint_tree = KDTree(self.waypoints_2d) 
 
     def traffic_cb(self, msg):
-        rospy.logdebug( "traffic_cb stopline_waypoint_index= %d", msg.data )
+        rospy.loginfo( "traffic_cb stopline_waypoint_index= %d", msg.data )
         self.stopline_waypoint_index = msg.data
 
     def obstacle_cb(self, msg):
