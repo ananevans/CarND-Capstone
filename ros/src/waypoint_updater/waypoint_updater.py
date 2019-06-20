@@ -7,6 +7,7 @@ from std_msgs.msg import Int32
 from scipy.spatial import KDTree
 
 import math
+from math import sqrt
 
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
@@ -66,7 +67,20 @@ class WaypointUpdater(object):
         '''
         x = self.pose.pose.position.x
         y = self.pose.pose.position.y
+        rospy.loginfo("Current pose %f, %f", x, y )
         closest_id = self.waypoint_tree.query( [x,y], 1 )[1]
+        
+        rospy.loginfo("Closest id pose %f, %f", self.base_waypoints.waypoints[closest_id].pose.pose.position.x, 
+                      self.base_waypoints.waypoints[closest_id].pose.pose.position.y)
+        rospy.loginfo("Distance to closest waypoint %f", 
+              math.sqrt( (x-self.base_waypoints.waypoints[closest_id].pose.pose.position.x ) **2 + 
+              (y-self.base_waypoints.waypoints[closest_id].pose.pose.position.y) **2
+            ))
+        rospy.loginfo("Distance to closest waypoint %f", 
+              math.sqrt( (x-self.waypoints_2d[closest_id][0]) **2 + 
+              (y-self.waypoints_2d[closest_id][1]) **2
+            ))
+        
         # coordinates of the waypoint behind the closest one 
         x1 = self.waypoints_2d[closest_id-1][0]
         y1 = self.waypoints_2d[closest_id-1][1]
@@ -90,11 +104,13 @@ class WaypointUpdater(object):
         '''
         lane = Lane()
         
-        closest_index = self.get_closest_waypoints()
+        #closest_index = self.get_closest_waypoints()
+        closest_index = start
         farthest_index = closest_index + LOOKAHEAD_WPS
         
         rospy.loginfo("closest_index = %d farthest_index =  %d self.stopline_waypoint_index = %d", 
                       closest_index, farthest_index, self.stopline_waypoint_index)
+        rospy.loginfo("closest_index = %d", self.linear_search())
         
         lane.header = self.base_waypoints.header
         if self.stopline_waypoint_index == -1 or ( self.stopline_waypoint_index >= farthest_index ):
@@ -134,11 +150,25 @@ class WaypointUpdater(object):
         
         self.final_waypoints_pub.publish(lane)
         
+        
+    def linear_search(self):
+        x = self.pose.pose.position.x
+        y = self.pose.pose.position.y
+        min_dist = 100000.0
+        closest_index = -1
+        for idx, crt in enumerate(self.waypoints_2d):
+            dist = math.sqrt( (x-crt[0])**2 + (y-crt[1])**2 )
+            if (dist < min_dist):
+                closest_index = idx
+                min_dist = dist
+        return closest_index
+    
+    
     def pose_cb(self, msg):
         self.pose = msg
 
     def waypoints_cb(self, waypoints):
-        rospy.loginfo("created_waypoint_kdtree")
+        rospy.loginfo("created_waypoint_kdtree number of waypoints %d", len(waypoints.waypoints))
         self.base_waypoints = waypoints
         if not self.waypoints_2d:
             self.waypoints_2d = [[ waypoint.pose.pose.position.x, waypoint.pose.pose.position.y ] 
