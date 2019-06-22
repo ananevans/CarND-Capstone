@@ -149,24 +149,23 @@ class TLDetector(object):
         stop_line_positions = self.config['stop_line_positions']
         if(self.pose):
             car_position = self.get_closest_waypoint(self.pose.pose.position.x, self.pose.pose.position.y)
-
-        #TODO find the closest visible traffic light (if one exists)
-        diff = len(self.waypoints.waypoints)
-        for i, light in enumerate(self.lights):
-            # Get the stop line waypoint index
-            line = stop_line_positions[i]
-            line_position = self.get_closest_waypoint(line[0], line[1])
-            
-            # Number of indexes between our car and the stop line
-            d = line_position - car_position
-            if d >= 0 and d < diff:
-                diff = d
-                closest_light = light
-                line_wp_idx = line_position
-
-        if closest_light:
-            state = self.get_light_state(closest_light)
-            return line_wp_idx, state
+            #TODO find the closest visible traffic light (if one exists)
+            diff = len(self.waypoints.waypoints)
+            for i, light in enumerate(self.lights):
+                # Get the stop line waypoint index
+                line = stop_line_positions[i]
+                line_position = self.get_closest_waypoint(line[0], line[1])
+                
+                # Number of indexes between our car and the stop line
+                d = line_position - car_position
+                if d >= 0 and d < diff:
+                    diff = d
+                    closest_light = light
+                    line_wp_idx = line_position
+    
+            if closest_light:
+                state = self.get_light_state(closest_light)
+                return line_wp_idx, state
         #self.waypoints = None
         return -1, TrafficLight.UNKNOWN
 
