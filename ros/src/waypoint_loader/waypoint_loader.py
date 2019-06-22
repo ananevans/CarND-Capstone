@@ -27,6 +27,7 @@ class WaypointLoader(object):
         rospy.spin()
 
     def new_waypoint_loader(self, path):
+        rospy.loginfo('Trying to load from file %s', path )
         if os.path.isfile(path):
             waypoints = self.load_waypoints(path)
             self.publish(waypoints)

@@ -67,19 +67,19 @@ class WaypointUpdater(object):
         '''
         x = self.pose.pose.position.x
         y = self.pose.pose.position.y
-        rospy.loginfo("Current pose %f, %f", x, y )
+        #rospy.loginfo("Current pose %f, %f", x, y )
         closest_id = self.waypoint_tree.query( [x,y], 1 )[1]
         
-        rospy.loginfo("Closest id pose %f, %f", self.base_waypoints.waypoints[closest_id].pose.pose.position.x, 
-                      self.base_waypoints.waypoints[closest_id].pose.pose.position.y)
-        rospy.loginfo("Distance to closest waypoint %f", 
-              math.sqrt( (x-self.base_waypoints.waypoints[closest_id].pose.pose.position.x ) **2 + 
-              (y-self.base_waypoints.waypoints[closest_id].pose.pose.position.y) **2
-            ))
-        rospy.loginfo("Distance to closest waypoint %f", 
-              math.sqrt( (x-self.waypoints_2d[closest_id][0]) **2 + 
-              (y-self.waypoints_2d[closest_id][1]) **2
-            ))
+#         rospy.loginfo("Closest id pose %f, %f", self.base_waypoints.waypoints[closest_id].pose.pose.position.x, 
+#                       self.base_waypoints.waypoints[closest_id].pose.pose.position.y)
+#         rospy.loginfo("Distance to closest waypoint %f", 
+#               math.sqrt( (x-self.base_waypoints.waypoints[closest_id].pose.pose.position.x ) **2 + 
+#               (y-self.base_waypoints.waypoints[closest_id].pose.pose.position.y) **2
+#             ))
+#         rospy.loginfo("Distance to closest waypoint %f", 
+#               math.sqrt( (x-self.waypoints_2d[closest_id][0]) **2 + 
+#               (y-self.waypoints_2d[closest_id][1]) **2
+#             ))
         
         # coordinates of the waypoint behind the closest one 
         x1 = self.waypoints_2d[closest_id-1][0]
@@ -110,11 +110,15 @@ class WaypointUpdater(object):
         
         rospy.loginfo("closest_index = %d farthest_index =  %d self.stopline_waypoint_index = %d", 
                       closest_index, farthest_index, self.stopline_waypoint_index)
-        rospy.loginfo("closest_index = %d", self.linear_search())
+#         rospy.loginfo("closest_index = %d", self.linear_search())
         
         lane.header = self.base_waypoints.header
         if self.stopline_waypoint_index == -1 or ( self.stopline_waypoint_index >= farthest_index ):
             lane.waypoints = self.base_waypoints.waypoints[ closest_index : farthest_index ]
+            rospy.loginfo("farthest_index=%d length=%d", farthest_index, len(self.base_waypoints.waypoints))
+            for i in range(len(lane.waypoints)):
+                velocity = lane.waypoints[i].twist.twist.linear.x
+                rospy.loginfo("Velocity=%2.2f", velocity)
         else:
             # decelerate
             lane.waypoints = []
@@ -140,7 +144,7 @@ class WaypointUpdater(object):
                 max_vel = math.sqrt(2 * self.decel_limit_mpsps * dist)
                 if max_vel < 1.:
                     max_vel = 0.0
-                rospy.loginfo("%2.2f %2.2f %2.2f", dist, velocity, max_vel)
+                rospy.loginfo("dist=%2.2f velocity=%2.2f max_vel=%2.2f", dist, velocity, max_vel)
                 velocity = min(max_vel, velocity)
                 waypoint.twist.twist.linear.x = min( velocity, self.base_waypoints.waypoints[i].twist.twist.linear.x )
                 lane.waypoints.append(waypoint)
