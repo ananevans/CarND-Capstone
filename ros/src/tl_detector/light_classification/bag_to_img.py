@@ -23,7 +23,7 @@ def main():
     i = 0
     # loop over the topic to read evey message
     for topic, msg, t in bag.read_messages(topics='/image_raw'):
-        im = bridge.imgmsg_to_cv2(msg, 'rgb8')
+        im = bridge.imgmsg_to_cv2(msg, 'bgr8')
         # im = np.array([msg.data.data])
         # resized = cv2.resize(im.data, (im.width, im.height))
         cv.imwrite('imgs/' +str(i) +'.png', im)
