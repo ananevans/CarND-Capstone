@@ -1,0 +1,32 @@
+{
+    "datasets": ["imgs/green", "imgs/red", "imgs/unknown", "imgs/yellow"],
+    "labels" : [2,0,4,1],  
+    "data_augmentation":
+                {   
+                    "flip":true,
+                    "flip_images": true,
+                    "darken": false,
+                    "dark_gamme":0.35,
+                    "brighten": false,
+                    "bright_gamma":5,
+                    "blur":false,
+                    "blur_kernel":5,
+                    "rotate":true,
+                    "rotation_angle_deg": 5,
+                    "translate":true,
+                    "distance_px":10,
+                    "show_images": true,
+                    "write_images": true
+
+                },
+                
+    "training": 
+                {
+                    "epochs": 7,
+                    "network": "alexnet",
+                    "visualise_performance": true,
+                    "load_model": false,
+                    "model_name": "alexnet_classifier_model.h5",
+                    "train": false
+                }
+}
