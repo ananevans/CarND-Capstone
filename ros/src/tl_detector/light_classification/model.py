@@ -70,6 +70,16 @@ for dataset, state in zip(datasets, labels):
             images.append(image_neg)
             traffic_state.append(state)
 
+        if data_augmentation['rotate']:
+            angle = data_augmentation['rotation_angle_deg']
+            image_rotate_pos = DA.rotate_dataset(image, angle)
+            images.append(image_rotate_pos)
+            traffic_state.append(state)
+            angle = -angle
+            image_rotate_neg= DA.rotate_dataset(image, angle)
+            images.append(image_rotate_neg)
+            traffic_state.append(state)
+
 if data_augmentation['flip']: 
     print ('Flipping all..'+str(len(images)))
     for i in range(len(images)): 
@@ -121,64 +131,72 @@ y_train = np.array(traffic_state)
 
 shape = X_train[-1].shape
 
+print shape
+
 from keras.models import Sequential, Model, load_model
 from keras.layers import Flatten, Dense, Lambda, Activation, Cropping2D, Dropout
-from keras.layers.convolutional import Conv2D
-from keras.layers.pooling import MaxPooling2D
+from keras.layers.convolutional import Conv2D, ZeroPadding2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
+from keras.losses import sparse_categorical_crossentropy
+from keras.regularizers import l2
+from keras.utils.np_utils import to_categorical
+
+# y_train = to_categorical(y_train, len(labels)) # one hot encoding
 
 model = Sequential()
-model.add(Lambda(lambda x: (x / 255.0) - 0.5))
 
 if training_parameters['network'] == 'alexnet':
     # implement alexnet
     # 1st Convolutional Layer
-    model.add(Conv2D(filters=96, input_shape=shape, kernel_size=(11,11), strides=(4,4), padding='valid'))
+    # Initialize model
+    # Layer 1
+    model.add(Conv2D(96, (11, 11), input_shape=(shape[0], shape[1], shape[2]),
+        padding='same', kernel_regularizer=l2(0)))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    # Max Pooling
-    model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
-    # 2nd Convolutional Layer
-    model.add(Conv2D(filters=256, kernel_size=(11,11), strides=(1,1), padding='valid'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    # Layer 2
+    model.add(Conv2D(256, (5, 5), padding='same'))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    # Max Pooling
-    model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
-    # 3rd Convolutional Layer
-    model.add(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), padding='valid'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    # Layer 3
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Conv2D(512, (3, 3), padding='same'))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    # 4th Convolutional Layer
-    model.add(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), padding='valid'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    # Layer 4
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Conv2D(1024, (3, 3), padding='same'))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    # 5th Convolutional Layer
-    model.add(Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding='valid'))
+    # Layer 5
+    model.add(ZeroPadding2D((1, 1)))
+    model.add(Conv2D(1024, (3, 3), padding='same'))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    # Max Pooling
-    model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
-    # Passing it to a Fully Connected layer
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    # Layer 6
     model.add(Flatten())
-    # 1st Fully Connected Layer
-    model.add(Dense(4096, input_shape=(224*224*3,)))
+    model.add(Dense(3072))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    # Add Dropout to prevent overfitting
-    model.add(Dropout(0.4))
-    # 2nd Fully Connected Layer
+    model.add(Dropout(0.5))
+    # Layer 7
     model.add(Dense(4096))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    # Add Dropout
-    model.add(Dropout(0.4))
-    # 3rd Fully Connected Layer
-    model.add(Dense(1000))
-    model.add(Activation('relu'))
-    # Add Dropout
-    model.add(Dropout(0.4))
-    # Output Layer
-    model.add(Dense(4))
+    model.add(Dropout(0.5))
+    # Layer 8
+    model.add(Dense(len(labels)))
+    model.add(BatchNormalization())
     model.add(Activation('softmax'))
 
-
 elif training_parameters['network'] == 'lenet':
-    model.add(Conv2D(32,  3, 3, input_shape=shape))
+    model.add(Conv2D(32,  (3, 3), input_shape=shape))
     model.add(Activation('relu'))
-    model.add(Conv2D(64, 3, 3))
+    model.add(Conv2D(64, (3, 3)))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
@@ -191,13 +209,13 @@ elif training_parameters['network'] == 'lenet':
 model.summary()
 
 # Compile the model
-model.compile(loss=keras.losses.categorical_crossentropy, optimizer='adam', metrics=["accuracy"])
+model.compile(loss=sparse_categorical_crossentropy, optimizer='adam', metrics=["accuracy"])
 
 if training_parameters['load_model']:
     model = load_model(training_parameters['model_name'])
 
 if training_parameters['train']:
-    history_object = model.fit(X_train, y_train, validation_split = 0.2, nb_epoch=training_parameters['epochs'], shuffle = True)
+    history_object = model.fit(X_train, y_train, validation_split = 0.2, epochs=training_parameters['epochs'], shuffle = True)
 
     model.save(training_parameters['network']+'_classifier_model.h5')
 

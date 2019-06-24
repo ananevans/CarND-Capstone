@@ -5,17 +5,17 @@
                 {   
                     "flip":true,
                     "flip_images": true,
-                    "darken": false,
+                    "darken": true,
                     "dark_gamme":0.35,
-                    "brighten": false,
+                    "brighten": true,
                     "bright_gamma":5,
-                    "blur":false,
+                    "blur":true,
                     "blur_kernel":5,
                     "rotate":true,
                     "rotation_angle_deg": 5,
                     "translate":true,
                     "distance_px":10,
-                    "show_images": true,
+                    "show_images": false,
                     "write_images": true
 
                 },
@@ -27,6 +27,6 @@
                     "visualise_performance": true,
                     "load_model": false,
                     "model_name": "alexnet_classifier_model.h5",
-                    "train": false
+                    "train": true
                 }
 }
