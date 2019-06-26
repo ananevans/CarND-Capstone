@@ -124,7 +124,7 @@ class TLDetector(object):
         else:
             pred_state = self.light_classifier.get_sim_classification(cv_image)
         #rospy.loginfo('Light state: {}'.format(light.state))
-        rospy.loginfo('Predicted state: {}'.format(pred_state))
+        #rospy.loginfo('Predicted state: {}'.format(pred_state))
         #return light.state
         return pred_state
 
