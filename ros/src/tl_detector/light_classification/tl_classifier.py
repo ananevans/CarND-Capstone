@@ -5,10 +5,15 @@ import numpy as np
 import tensorflow as tf
 
 class TLClassifier(object):
-    def __init__(self):
+    def __init__(self, is_site):
         num_classes = 4
         dir = os.path.dirname(os.path.realpath(__file__))
-        path = dir + '/models/frozen_inf_graph_sim_ssd.pb'
+        if is_site:
+            path = dir + '/models/frozen_inf_graph_real_ssd.pb'
+            
+        else:
+            path = dir + '/models/frozen_inf_graph_sim_ssd.pb'
+
         labels_path = dir + '/label_map.pbtxt'
 
         #Load frozen model
@@ -35,7 +40,7 @@ class TLClassifier(object):
 
         self.category_index = label_map_util.create_category_index(categories)
 
-    def get_sim_classification(self, image):
+    def get_classification(self, image):
         """Determines the color of the traffic light in the image when in simulator
         Args:
             image (cv::Mat): image containing the traffic light
@@ -62,12 +67,3 @@ class TLClassifier(object):
             detected_light = TrafficLight.UNKNOWN
 
         return detected_light
-    
-    def get_site_classification(self, image):
-        """Determines the color of the traffic light in the image when in site
-        Args:
-            image (cv::Mat): image containing the traffic light
-        Returns:
-            int: ID of traffic light color (specified in styx_msgs/TrafficLight)
-        """
-        return TrafficLight.UNKNOWN
