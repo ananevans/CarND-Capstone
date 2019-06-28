@@ -115,10 +115,10 @@ class WaypointUpdater(object):
         lane.header = self.base_waypoints.header
         if self.stopline_waypoint_index == -1 or ( self.stopline_waypoint_index >= farthest_index ):
             lane.waypoints = self.base_waypoints.waypoints[ closest_index : farthest_index ]
-            rospy.loginfo("farthest_index=%d length=%d", farthest_index, len(self.base_waypoints.waypoints))
-            for i in range(len(lane.waypoints)):
-                velocity = lane.waypoints[i].twist.twist.linear.x
-                rospy.loginfo("Velocity=%2.2f", velocity)
+            # rospy.loginfo("farthest_index=%d length=%d", farthest_index, len(self.base_waypoints.waypoints))
+            # for i in range(len(lane.waypoints)):
+            #     velocity = lane.waypoints[i].twist.twist.linear.x
+            #     # rospy.loginfo("Velocity=%2.2f", velocity)
         else:
             # decelerate
             lane.waypoints = []
