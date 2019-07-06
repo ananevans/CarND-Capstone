@@ -8,8 +8,10 @@ from cv_bridge import CvBridge
 import cv2 as cv
 import numpy as np
 import argparse
+import tl_classifier as tlc
 
 bridge = CvBridge()
+classifier = tlc.TLClassifier(1)
     
 def main():
     parser = argparse.ArgumentParser(description='Analyse Path Following')
@@ -24,14 +26,15 @@ def main():
     # loop over the topic to read evey message
     for topic, msg, t in bag.read_messages(topics='/image_raw'):
         im = bridge.imgmsg_to_cv2(msg, 'bgr8')
-        # im = np.array([msg.data.data])
-        # resized = cv2.resize(im.data, (im.width, im.height))
-        cv.imwrite('imgs/' +str(i) +'.png', im)
+        color = classifier.get_classification(im)
+        cv.imwrite(color+'/' +str(i) +'.png', im)
         i+=1
-        if (i%100 == 0):
+        if (True):
             print i
     bag.close()
 
-if __name__ == '__main__':
+if __name__ == '__main__' and __package__ is None:
+    from os import sys, path
+    sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
     main()
 

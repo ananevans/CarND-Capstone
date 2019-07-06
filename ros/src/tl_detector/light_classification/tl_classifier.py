@@ -3,14 +3,14 @@ from obj_det_utils import label_map_util
 import os
 import numpy as np
 import tensorflow as tf
-
+import cv2
 class TLClassifier(object):
     def __init__(self, is_site):
+        self.is_site = is_site
         num_classes = 4
         dir = os.path.dirname(os.path.realpath(__file__))
-        if is_site:
-            path = dir + '/models/frozen_inf_graph_real_ssd.pb'
-            
+        if self.is_site:
+            path = dir + '/models/model_ssd/frozen_inference_graph.pb'
         else:
             path = dir + '/models/frozen_inf_graph_sim_ssd.pb'
 
@@ -65,5 +65,5 @@ class TLClassifier(object):
                 detected_light = TrafficLight.YELLOW
         else:
             detected_light = TrafficLight.UNKNOWN
-
+        
         return detected_light
